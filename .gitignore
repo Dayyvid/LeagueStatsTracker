@@ -1,0 +1,6 @@
+# Python compiled code
+__pycache__
+.pyc
+
+# Config file
+config.py
