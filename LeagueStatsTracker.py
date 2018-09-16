@@ -4,6 +4,7 @@ import json
 from collections import Counter
 import config.config as config
 import data.gameModeData as gameModeData
+import data.championData as championData
 auth = '?api_key=' + config.API_KEY
 
 def getSummonerData():
@@ -21,6 +22,30 @@ def getPreviousMatchesData(accountId):
     return jsonData["matches"]
 #end def getPreviousMatchIds
 
+# List Functions
+#---------------------------------------------------------------------------------------------------------------
+def appendToList(previousMatchesData, templateList, identifier):
+    for match in previousMatchesData:
+        templateList.append(str(match[identifier]))
+    templateList = formatList(templateList)
+#end def appendToList
+
+def formatList(unsortedList):
+    unsortedList = [[x, unsortedList.count(x)] for x in set(unsortedList)] # Set list to contain count of each item\
+    unsortedList.sort(key = lambda x: x[1], reverse = True) # Orders list by number of occurences descending
+    return unsortedList
+#end def formatList
+
+def printSortedList(templateList):
+	print(" ")
+	for x in templateList:
+		print(x[0], ":", x[1])
+#end def printPreviousPlayers
+#---------------------------------------------------------------------------------------------------------------
+
+
+# Previous Players For Last 20 Matches Functions
+#---------------------------------------------------------------------------------------------------------------
 def appendPreviousPlayers(playersHolderDict, matchId):
     http = urllib.request.urlopen(config.MATCH_URL + str(matchId) + auth)
     httpData = http.read().decode("utf-8")
@@ -33,16 +58,6 @@ def appendPreviousPlayers(playersHolderDict, matchId):
     		playersHolderDict[summoner['player']['summonerName']] += 1
 #end def getMatchHistory
 
-def formatList(unsortedList):
-    unsortedList = [[x, unsortedList.count(x)] for x in set(unsortedList)] # Set list to contain count of each item\
-    unsortedList.sort(key = lambda x: x[1], reverse = True) # Orders list by number of occurences descending
-    return unsortedList
-#end def reverseList
-
-def printPreviousPlayers(previousPlayersList):
-	for player in previousPlayersList:
-		print(player[0], ":", player[1])
-#end def printPreviousPlayers
 def getPreviousPlayers(matchesIdList, summonerName):
     tempDict = {}
     i = 1
@@ -54,11 +69,20 @@ def getPreviousPlayers(matchesIdList, summonerName):
     previousPlayersList = [x for x in previousPlayersList if x[1] > 1 and x[0] != summonerName]
     return previousPlayersList
 #end def getPreviousPlayers
+#---------------------------------------------------------------------------------------------------------------
 
-def appendToList(previousMatchesData, templateList, identifier):
-    for match in previousMatchesData:
-        templateList.append(str(match[identifier]))
-    templateList = formatList(templateList)
+# Champion Functions
+#---------------------------------------------------------------------------------------------------------------
+def convertIdToChampion(templateList, jsonDict):
+	temp = []
+	jsonDict = jsonDict['data']
+	for i in range(0,len(templateList)):
+		for champion in jsonDict:
+			if str(jsonDict[champion]['id']) == templateList[i]:
+				templateList[i] = champion
+	return templateList
+#end def convertIdToChampion
+#---------------------------------------------------------------------------------------------------------------
 
 def main():
     summonerData = getSummonerData()
@@ -76,10 +100,13 @@ def main():
         appendToList(previousMatchesData, gameModeList, "queue")
         appendToList(previousMatchesData, laneList, "lane")
         appendToList(previousMatchesData, matchesIdList, "gameId")
-
-        userInput = input("Enter 1 to see players recently played with for the past 20 games: ")
+        userInput = input("Enter 1 to see players recently played with for the past 20 games: \nEnter 2 to see champions played for past 20 games: ")
         if(userInput == "1"):
         	previousPlayers = getPreviousPlayers(matchesIdList, summonerData["name"])
-        	printPreviousPlayers(previousPlayers)
+        	printSortedList(previousPlayers)
+        if(userInput == "2"):
+        	championsList = convertIdToChampion(championsList, championData.championData)
+        	championsList = formatList(championsList)
+        	printSortedList(championsList)
 if __name__ == "__main__":
     main()
