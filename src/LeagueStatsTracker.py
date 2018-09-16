@@ -37,9 +37,9 @@ def formatList(unsortedList):
 #end def formatList
 
 def printSortedList(templateList):
-	print(" ")
-	for x in templateList:
-		print(x[0], ":", x[1])
+    print(" ")
+    for x in templateList:
+        print(x[0], ":", x[1])
 #end def printPreviousPlayers
 #---------------------------------------------------------------------------------------------------------------
 
@@ -52,10 +52,10 @@ def appendPreviousPlayers(playersHolderDict, matchId):
     jsonData = json.loads(httpData)
     matchPlayersInfo = jsonData["participantIdentities"]
     for summoner in matchPlayersInfo:
-    	if summoner['player']['summonerName'] not in playersHolderDict:
-    		playersHolderDict[summoner['player']['summonerName']] = 1
-    	else:
-    		playersHolderDict[summoner['player']['summonerName']] += 1
+        if summoner['player']['summonerName'] not in playersHolderDict:
+            playersHolderDict[summoner['player']['summonerName']] = 1
+        else:
+            playersHolderDict[summoner['player']['summonerName']] += 1
 #end def getMatchHistory
 
 def getPreviousPlayers(matchesIdList, summonerName):
@@ -74,19 +74,27 @@ def getPreviousPlayers(matchesIdList, summonerName):
 # Champion Functions
 #---------------------------------------------------------------------------------------------------------------
 def convertIdToChampion(templateList, jsonDict):
-	temp = []
-	for i in range(0,len(templateList)):
-		for champion in jsonDict:
-			if str(jsonDict[champion]['id']) == templateList[i]:
-				templateList[i] = champion
-	return templateList
+    for i in range(0,len(templateList)):
+        if templateList[i] in jsonDict:
+                templateList[i] = jsonDict[templateList[i]]['name']
+    return templateList
 #end def convertIdToChampion
 #---------------------------------------------------------------------------------------------------------------
 
+# Game Mode Functions
+#---------------------------------------------------------------------------------------------------------------
+def convertIdToGameMode(templateList, jsonDict):
+    for i in range(0, len(templateList)):
+        if templateList[i] in jsonDict:
+            templateList[i] = jsonDict[templateList[i]]
+    return templateList
+
+#end def convertIdToGameMode
+#---------------------------------------------------------------------------------------------------------------
 def main():
     summonerData = getSummonerData()
     print(summonerData)
-    userInput = input("Enter 1 to get previous matches: ")
+    userInput = input("Enter 1 to get match data: ")
     if(userInput == "1"):
         previousMatchesData = getPreviousMatchesData(summonerData["accountId"])
         championsList = []
@@ -99,13 +107,18 @@ def main():
         appendToList(previousMatchesData, gameModeList, "queue")
         appendToList(previousMatchesData, laneList, "lane")
         appendToList(previousMatchesData, matchesIdList, "gameId")
-        userInput = input("Enter 1 to see players recently played with for the past 20 games: \nEnter 2 to see champions played for past 20 games: ")
-        if(userInput == "1"):
-        	previousPlayers = getPreviousPlayers(matchesIdList, summonerData["name"])
-        	printSortedList(previousPlayers)
-        if(userInput == "2"):
-        	championsList = convertIdToChampion(championsList, championFile.championData)
-        	championsList = formatList(championsList)
-        	printSortedList(championsList)
+        userInput = input("Enter 1 to see players recently played with for the past 20 games:\nEnter 2 to see champions played for past 20 games:\nEnter 3 to see game modes played for past 20 games: ")
+        if userInput == "1":
+            previousPlayers = getPreviousPlayers(matchesIdList, summonerData["name"])
+            printSortedList(previousPlayers)
+        if userInput == "2":
+            championsList = convertIdToChampion(championsList, championFile.championData)
+            championsList = formatList(championsList)
+            printSortedList(championsList)
+        if userInput == "3":
+            gameModeList = convertIdToGameMode(gameModeList, gameModeFile.gameModeData)
+            gameModeList = formatList(gameModeList)
+            printSortedList(gameModeList)
+
 if __name__ == "__main__":
     main()
