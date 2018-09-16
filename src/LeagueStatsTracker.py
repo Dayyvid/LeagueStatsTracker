@@ -3,8 +3,8 @@ import urllib.request
 import json
 from collections import Counter
 import config.config as config
-import data.gameModeData as gameModeData
-import data.championData as championData
+import data.gameModeData as gameModeFile
+import data.championData as championFile
 auth = '?api_key=' + config.API_KEY
 
 def getSummonerData():
@@ -75,7 +75,6 @@ def getPreviousPlayers(matchesIdList, summonerName):
 #---------------------------------------------------------------------------------------------------------------
 def convertIdToChampion(templateList, jsonDict):
 	temp = []
-	jsonDict = jsonDict['data']
 	for i in range(0,len(templateList)):
 		for champion in jsonDict:
 			if str(jsonDict[champion]['id']) == templateList[i]:
@@ -105,7 +104,7 @@ def main():
         	previousPlayers = getPreviousPlayers(matchesIdList, summonerData["name"])
         	printSortedList(previousPlayers)
         if(userInput == "2"):
-        	championsList = convertIdToChampion(championsList, championData.championData)
+        	championsList = convertIdToChampion(championsList, championFile.championData)
         	championsList = formatList(championsList)
         	printSortedList(championsList)
 if __name__ == "__main__":
