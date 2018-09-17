@@ -1,5 +1,6 @@
 import urllib.request
 import json
+import sys
 from collections import Counter
 import config.config as config
 import data.gameModeData as gameModeFile
@@ -10,45 +11,100 @@ class Player:
 
     def __init__(self, name):
         self.name = name
-        http = urllib.request.urlopen(config.SUMMONER_URL + self.name + auth)
-        httpData = http.read().decode("utf-8")
-        jsonData = json.loads(httpData)
-
+        tempName = urllib.parse.quote(name) # Replace spaces for HTTP Request
+        try:
+            http = urllib.request.urlopen(config.SUMMONER_URL + tempName + auth)
+            httpData = http.read().decode("utf-8")
+            jsonData = json.loads(httpData)
+        except urllib.error.HTTPError:
+            print("Error: " + name + " is not a valid summoner!")
+            sys.exit(1)
+        except Exception as e:
+            print("Error: " + str(e))
+            sys.exit(1)
+        self.summonerId = jsonData['id']
         self.accountId = jsonData['accountId']
         self.id = jsonData['id']
         self.summonerLevel = jsonData['summonerLevel']
     #end def __init__
 
+    # Current Match Functions
+    #---------------------------------------------------------------------------------------------------------------
+    def getCurrentMatchData(self):
+        try:
+            http = urllib.request.urlopen(config.CURRENT_MATCH_URL + str(self.summonerId) + auth)
+            httpData = http.read().decode("utf-8")
+            jsonData = json.loads(httpData)
+        except urllib.error.HTTPError:
+            print("Error: " + self.name + " is not currently in a match!")
+            sys.exit(1)
+        return jsonData
+    #end def getCurrentMatchData
+
+    def getTeamsFromCurrentMatch(self, currentMatchData):
+        team1List = []
+        team2List = []
+        allTeamsList = {}
+        i = 1
+        for summoner in currentMatchData["participants"]:
+            tempName = summoner["summonerName"]
+            tempName = urllib.parse.quote(tempName) # Deals with special characters
+
+            try:
+                print("Fetching summoner " + str(i))
+                http = urllib.request.urlopen(config.SUMMONER_URL + tempName + auth)
+                httpData = http.read().decode("utf-8")
+                jsonData = json.loads(httpData)
+            except Exception as e:
+                print("Error occured for summoner "  + str(i) + ": " + str(e))
+            summonerLevel = jsonData['summonerLevel']
+
+            if summoner["teamId"] == 100:
+                team1List.append({'summonerName': summoner["summonerName"], 'champion': summoner["championId"], 'summonerLevel': summonerLevel})
+            elif summoner["teamId"] == 200:
+                team2List.append({'summonerName': summoner["summonerName"], 'champion': summoner["championId"], 'summonerLevel': summonerLevel})
+            i += 1
+
+        allTeamsList["Team1"] = team1List
+        allTeamsList["Team2"] = team2List
+        return allTeamsList
     # Previous Match Functions
+
+    def printTeamsData(self, teamsData):
+        for team in teamsData:
+            print("")
+            print(team + ": ")
+            print("")
+            for player in teamsData[team]:
+                champion = self.convertIdToChampion(player['champion'])
+                print("Summoner Name: " + player['summonerName'] + ", Level: " + str(player['summonerLevel']) + ", Champion: " + champion["name"])
+    #end def printTeamsData
+
     #---------------------------------------------------------------------------------------------------------------
     def getPreviousMatchesData(self):
-        http = urllib.request.urlopen(config.PREVIOUS_MATCH_URL + str(self.accountId) + auth +'&beginIndex=0&endIndex=20') # Get total games (find better way of getting this data?)
-        httpData = http.read().decode("utf-8")
-        jsonData = json.loads(httpData)
+        try:
+            http = urllib.request.urlopen(config.PREVIOUS_MATCH_URL + str(self.accountId) + auth +'&beginIndex=0&endIndex=20') # Get total games (find better way of getting this data?)
+            httpData = http.read().decode("utf-8")
+            jsonData = json.loads(httpData)
+        except Exception as e:
+            print("Error: " + str(e))
+            sys.exit(1)
         return jsonData["matches"]
     #end def getPreviousMatchIds
 
     # Champion Functions
     #---------------------------------------------------------------------------------------------------------------
-    def convertIdToChampion(self, previousChampionsList):
-        toReturn = []
+    def convertIdToChampion(self, championId):
         championDict = championFile.championData
-        for i in range(0,len(previousChampionsList)):
-            currentChampionId = previousChampionsList[i]
-            toReturn.append(championDict[currentChampionId]['name'])
-        return toReturn
+        return championDict[str(championId)]['name']
     #end def convertIdToChampion
     #---------------------------------------------------------------------------------------------------------------
 
     # Game Mode Functions
     #---------------------------------------------------------------------------------------------------------------
-    def convertIdToGameMode(self, previousGameModesList):
-        toReturn = []
+    def convertIdToGameMode(self, gameModeId):
         gameModeDict = gameModeFile.gameModeData
-        for i in range(0, len(previousGameModesList)):
-            currentGameMode = previousGameModesList[i]
-            toReturn.append(gameModeDict[currentGameMode])
-        return toReturn
+        return gameModeDict[gameModeId]
     #end def convertIdToGameMode
     #---------------------------------------------------------------------------------------------------------------
 
@@ -68,9 +124,13 @@ class Player:
         else:
             i = 1
             for match in data:
-                http = urllib.request.urlopen(config.MATCH_URL + str(match) + auth)
-                httpData = http.read().decode("utf-8")
-                jsonData = json.loads(httpData)
+                try:
+                    http = urllib.request.urlopen(config.MATCH_URL + str(match) + auth)
+                    httpData = http.read().decode("utf-8")
+                    jsonData = json.loads(httpData)
+                except Exception as e:
+                    print("Error: " + str(e))
+                    sys.exit(1)
                 print("Fetching game: " + str(i))
                 i += 1
                 matchPlayersInfo = jsonData["participantIdentities"]
